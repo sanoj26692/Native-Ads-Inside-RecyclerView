@@ -1,0 +1,12 @@
+<resources>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="activity_horizontal_margin">8dp</dimen>
+    <dimen name="space_5">5dp</dimen>
+    <dimen name="space_12">12dp</dimen>
+    <dimen name="text_12">12sp</dimen>
+    <dimen name="space_10">10dp</dimen>
+    <dimen name="text_10">10sp</dimen>
+    <dimen name="gnt_no_margin">0dp</dimen>
+    <dimen name="gnt_ad_indicator_height">20dp</dimen>
+    <dimen name="gnt_ad_indicator_width">25dp</dimen>
+</resources>
