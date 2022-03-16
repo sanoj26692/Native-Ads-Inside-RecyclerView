@@ -16,49 +16,40 @@
 package com.example.nativeads;
 
 import android.annotation.SuppressLint;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.initialization.InitializationStatus;
-import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
+import com.google.android.gms.ads.interstitial.InterstitialAd;
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.google.android.gms.ads.nativead.NativeAd;
-import com.google.android.gms.ads.nativead.NativeAdView;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 public class MainActivity extends AppCompatActivity {
 
     RecyclerViewAdapter adapter;
-    private NativeAd nativeAd;
     private AdLoader adLoader;
-    int NUMBER_OF_ADS = 3;
+    private InterstitialAd mInterstitialAd;
+    Button showInterstitialAds;
+    int NUMBER_OF_ADS = 1;
 
     private static final String ADMOB_AD_UNIT_ID = "ca-app-pub-3940256099942544/2247696110";
+    public static final String TAG = "Debug";
 
     ArrayList<Object> arrayList = new ArrayList<>();
     private final List<NativeAd> mNativeAds = new ArrayList<>();
@@ -69,13 +60,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Initialize the Mobile Ads SDK.
-        MobileAds.initialize(this, new OnInitializationCompleteListener() {
-            @Override
-            public void onInitializationComplete(@NonNull InitializationStatus initializationStatus) {}
-        });
+        MobileAds.initialize(this, initializationStatus -> {});
 
         // data to populate the RecyclerView with
-
         arrayList.add("Horse");
         arrayList.add("Cow");
         arrayList.add("Camel");
@@ -88,19 +75,18 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new RecyclerViewAdapter(this, arrayList);
         recyclerView.setAdapter(adapter);
+
+        //Interstitial ads function
+        InterstitialAds();
     }
 
     private void refreshAd() {
         AdLoader.Builder builder = new AdLoader.Builder(this, ADMOB_AD_UNIT_ID);
-        adLoader = builder.forNativeAd(new NativeAd.OnNativeAdLoadedListener() {
-            // OnLoadedListener implementation.
-            @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
-            @Override
-            public void onNativeAdLoaded(@NonNull NativeAd nativeAd) {
-                mNativeAds.add(nativeAd);
-                if (!adLoader.isLoading()) {
-                    insertAdsInMenuItems();
-                }
+        // OnLoadedListener implementation.
+        adLoader = builder.forNativeAd(nativeAd -> {
+            mNativeAds.add(nativeAd);
+            if (!adLoader.isLoading()) {
+                insertAdsInMenuItems();
             }
         }).withAdListener(new AdListener() {
             @Override
@@ -132,12 +118,58 @@ public class MainActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
     }
 
-    @Override
-    protected void onDestroy() {
-        if (nativeAd != null) {
-            nativeAd.destroy();
-        }
-        super.onDestroy();
-    }
+    private void InterstitialAds() {
+        AdRequest adRequest = new AdRequest.Builder().build();
+        InterstitialAd.load(this,"ca-app-pub-3940256099942544/1033173712", adRequest,
+                new InterstitialAdLoadCallback() {
+                    @Override
+                    public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
+                        // The mInterstitialAd reference will be null until
+                        // an ad is loaded.
+                        mInterstitialAd = interstitialAd;
+                        Log.i(TAG, "onAdLoaded");
+                        mInterstitialAd.setFullScreenContentCallback(new FullScreenContentCallback(){
+                            @Override
+                            public void onAdDismissedFullScreenContent() {
+                                // Called when fullscreen content is dismissed.
+                                InterstitialAds();
+                                Log.d(TAG, "The ad was dismissed.");
+                            }
 
+                            @Override
+                            public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
+                                // Called when fullscreen content failed to show.
+                                Log.d(TAG, "The ad failed to show.");
+                            }
+
+                            @Override
+                            public void onAdShowedFullScreenContent() {
+                                // Called when fullscreen content is shown.
+                                // Make sure to set your reference to null so you don't
+                                // show it a second time.
+                                mInterstitialAd = null;
+                                Log.d(TAG, "The ad was shown.");
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        // Handle the error
+                        Log.i(TAG, loadAdError.getMessage());
+                        mInterstitialAd = null;
+                    }
+                });
+
+
+        showInterstitialAds = findViewById(R.id.show_ads);
+        showInterstitialAds.setOnClickListener(view -> {
+            if (mInterstitialAd != null) {
+                mInterstitialAd.show(MainActivity.this);
+                Log.d(TAG, "InterstitialAds loaded " + mInterstitialAd);
+            } else {
+                Log.d(TAG, "The interstitial ad wasn't ready yet.");
+            }
+        });
+    }
 }
